@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="max-width:960px;margin:40px auto;">
+    <h2 style="color:#4b3de3;">{{ platform }} 웹툰 목록</h2>
+    <form method="get" style="text-align:right; margin-bottom:18px;">
+        <input type="hidden" name="platform" value="{{ platform }}">
+        <input type="text" name="q" placeholder="작가/제목 검색" value="{{ query|default:'' }}"
+               style="padding:5px 12px; border-radius:6px; border:1px solid #bdb8ec; width:220px;">
+        <button type="submit" style="padding:5px 12px; border-radius:6px; border:none; background:#4b3de3; color:#fff;">검색</button>
+    </form>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px;">
+        {% for toon in webtoons %}
+            {% if toon.update_days or toon.updateDays %}
+                <div style="background:#fff;border-radius:10px;box-shadow:0 1px 8px #eee;padding:13px;">
+                    <a href="{{ toon.url }}" target="_blank">
+                        <img src="{% if toon.thumbnail %}{{ toon.thumbnail }}{% elif toon.thumbnail.0 %}{{ toon.thumbnail.0 }}{% endif %}"
+                             width="150" alt="썸네일"
+                             style="display:block;margin:auto;border-radius:7px;">
+                    </a>
+                    <div style="font-weight:bold;margin-top:7px;">{{ toon.title }}</div>
+                    <div style="color:#6767aa;">작가:
+                        {% if toon.authors %}
+                            {% if toon.authors.0 and toon.authors|length > 1 and toon.authors|slice:":2"|join:""|length > 2 %}
+                                {% for author in toon.authors %}
+                                    {{ author }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ toon.authors }}
+                            {% endif %}
+                        {% else %}
+                            정보 없음
+                        {% endif %}
+                    </div>
+                    <div style="color:#947dff; font-size:13px;">
+                        업데이트:
+                        {% if toon.update_days %}
+                            {{ toon.update_days }}
+                        {% else %}
+                            {% for d in toon.updateDays %}{{ d }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% empty %}
+            <div>웹툰 정보가 없습니다.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

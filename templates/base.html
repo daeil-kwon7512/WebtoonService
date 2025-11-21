@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>웹툰 서비스</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f7fa;}
+        .navbar { display: flex; gap:20px; background: #4b3de3; padding: 10px 30px; }
+        .navbar a { color: #fff; text-decoration: none; font-weight: bold; padding: 5px 12px; border-radius:6px;}
+        .navbar a.active, .navbar a:hover { background: #fff; color: #4b3de3;}
+        .profile { margin-left: auto;}
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="{% url 'toons:webtoon_list' %}?platform=NAVER"
+           class="{% if platform == 'NAVER' %}active{% endif %}">네이버웹툰</a>
+        <a href="{% url 'toons:webtoon_list' %}?platform=KAKAO"
+           class="{% if platform == 'KAKAO' %}active{% endif %}">카카오웹툰</a>
+        <a href="{% url 'toons:webtoon_list' %}?platform=KAKAO_PAGE"
+           class="{% if platform == 'KAKAO_PAGE' %}active{% endif %}">카카오페이지</a>
+        <span class="profile">
+            {% if request.user.is_authenticated %}
+                {{ request.user.username }} | <a href="{% url 'accounts:logout' %}">로그아웃</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">로그인</a>
+                <a href="{% url 'accounts:signup' %}">회원가입</a>
+            {% endif %}
+        </span>
+    </div>
+    {% block content %}{% endblock %}
+</body>
+</html>
