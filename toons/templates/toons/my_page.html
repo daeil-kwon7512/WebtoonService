@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .mypage-container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+    .mypage-header {
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .mypage-header h1 {
+        color: #333;
+        font-size: 28px;
+        margin: 0;
+    }
+    .mypage-tabs {
+        display: flex;
+        gap: 10px;
+        border-bottom: 2px solid #e0e0e0;
+        margin-bottom: 30px;
+    }
+    .tab-item {
+        padding: 12px 24px;
+        color: #666;
+        text-decoration: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .tab-item:hover {
+        color: #4b3de3;
+    }
+    .tab-item.active {
+        color: #4b3de3;
+        border-bottom-color: #4b3de3;
+    }
+    .filter-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .platform-filters {
+        display: flex;
+        gap: 10px;
+    }
+    .filter-btn {
+        padding: 8px 16px;
+        border: 1px solid #ddd;
+        background: white;
+        color: #666;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    .filter-btn:hover {
+        border-color: #4b3de3;
+        color: #4b3de3;
+    }
+    .filter-btn.active {
+        background: #4b3de3;
+        color: white;
+        border-color: #4b3de3;
+    }
+    .search-box {
+        display: flex;
+        gap: 8px;
+    }
+    .search-box input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        width: 220px;
+    }
+    .search-box button {
+        padding: 8px 16px;
+        background: #4b3de3;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .webtoon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 22px;
+    }
+    .webtoon-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+        padding: 13px;
+        position: relative;
+        transition: transform 0.2s;
+    }
+    .webtoon-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    /* 이미지 로딩 스켈레톤 */
+    .thumbnail-wrapper {
+        width: 100%;
+        aspect-ratio: 3/4;
+        position: relative;
+        overflow: hidden;
+        border-radius: 7px;
+        background: #f0f0f0;
+    }
+    
+    .thumbnail-skeleton {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            #f0f0f0 0%,
+            #e0e0e0 50%,
+            #f0f0f0 100%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes skeleton-loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+    
+    .webtoon-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    
+    .webtoon-thumbnail.loaded {
+        opacity: 1;
+    }
+    
+    .favorite-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255,255,255,0.95);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        font-size: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: transform 0.2s;
+        z-index: 10;
+    }
+    .favorite-btn:hover {
+        transform: scale(1.1);
+    }
+    .webtoon-title {
+        font-weight: bold;
+        margin-top: 10px;
+        font-size: 15px;
+        color: #333;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .webtoon-author {
+        color: #6767aa;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+    .webtoon-days {
+        color: #947dff;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    .empty-message {
+        text-align: center;
+        padding: 80px 20px;
+        color: #999;
+    }
+    .empty-message-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="mypage-container">
+    <div class="mypage-header">
+        <h1>마이페이지</h1>
+    </div>
+    
+    <div class="mypage-tabs">
+        <a href="?tab=interest" class="tab-item {% if current_tab == 'interest' %}active{% endif %}">
+            관심웹툰
+        </a>
+        <a href="?tab=recent" class="tab-item {% if current_tab == 'recent' %}active{% endif %}" 
+           style="color:#ccc; pointer-events:none;">
+            최근 본 웹툰 (준비중)
+        </a>
+        <a href="?tab=comments" class="tab-item {% if current_tab == 'comments' %}active{% endif %}"
+           style="color:#ccc; pointer-events:none;">
+            내가 단 댓글 (준비중)
+        </a>
+    </div>
+    
+    {% if current_tab == 'interest' %}
+    <div class="filter-bar">
+        <div class="platform-filters">
+            <a href="?tab=interest&platform=ALL" class="filter-btn {% if platform == 'ALL' %}active{% endif %}">
+                전체
+            </a>
+            <a href="?tab=interest&platform=NAVER" class="filter-btn {% if platform == 'NAVER' %}active{% endif %}">
+                네이버
+            </a>
+            <a href="?tab=interest&platform=KAKAO" class="filter-btn {% if platform == 'KAKAO' %}active{% endif %}">
+                카카오
+            </a>
+            <a href="?tab=interest&platform=KAKAO_PAGE" class="filter-btn {% if platform == 'KAKAO_PAGE' %}active{% endif %}">
+                카카오페이지
+            </a>
+        </div>
+        
+        <form method="get" class="search-box">
+            <input type="hidden" name="tab" value="interest">
+            <input type="hidden" name="platform" value="{{ platform }}">
+            <input type="text" name="q" placeholder="작가/제목 검색" value="{{ query|default:'' }}">
+            <button type="submit">검색</button>
+        </form>
+    </div>
+    
+    <div class="webtoon-grid">
+        {% for toon in webtoons %}
+            <div class="webtoon-card">
+                <button class="favorite-btn" 
+                        data-webtoon-id="{{ toon.id }}"
+                        data-is-favorited="true">
+                    ⭐
+                </button>
+                
+                <a href="{{ toon.url }}" target="_blank">
+                    <div class="thumbnail-wrapper">
+                        <div class="thumbnail-skeleton"></div>
+                        <img src="{{ toon.thumbnail }}" 
+                             alt="{{ toon.title }}" 
+                             class="webtoon-thumbnail"
+                             loading="lazy">
+                    </div>
+                </a>
+                <div class="webtoon-title">{{ toon.title }}</div>
+                <div class="webtoon-author">{{ toon.authors }}</div>
+                <div class="webtoon-days">{{ toon.update_days }}</div>
+            </div>
+        {% empty %}
+            <div class="empty-message" style="grid-column: 1 / -1;">
+                <div class="empty-message-icon">📚</div>
+                <h3>관심웹툰이 없습니다</h3>
+                <p>웹툰 목록에서 별(⭐) 버튼을 눌러 관심웹툰에 추가해보세요!</p>
+                <a href="{% url 'toons:webtoon_list' %}" style="display:inline-block; margin-top:20px; padding:12px 24px; background:#4b3de3; color:white; text-decoration:none; border-radius:8px;">
+                    웹툰 둘러보기
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// 이미지 로딩 처리
+document.querySelectorAll('.webtoon-thumbnail').forEach(img => {
+    if (img.complete) {
+        img.classList.add('loaded');
+        const skeleton = img.previousElementSibling;
+        if (skeleton) skeleton.style.display = 'none';
+    } else {
+        img.addEventListener('load', function() {
+            this.classList.add('loaded');
+            const skeleton = this.previousElementSibling;
+            if (skeleton) skeleton.style.display = 'none';
+        });
+        
+        img.addEventListener('error', function() {
+            const skeleton = this.previousElementSibling;
+            if (skeleton) {
+                skeleton.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:12px;">이미지<br>로드 실패</div>';
+            }
+        });
+    }
+});
+
+// 즐겨찾기 버튼 이벤트
+document.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const webtoonId = this.dataset.webtoonId;
+        const card = this.closest('.webtoon-card');
+        
+        fetch(`/toons/webtoons/${webtoonId}/favorite/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && !data.is_favorited) {
+                // 즐겨찾기 해제시 카드 제거 애니메이션
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                setTimeout(() => card.remove(), 300);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('즐겨찾기 처리 중 오류가 발생했습니다.');
+        });
+    });
+});
+</script>
+{% endblock %}

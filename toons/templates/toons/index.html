@@ -1,50 +1,220 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    .webtoon-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 1px 8px #eee;
+        padding: 13px;
+        position: relative;
+    }
+    
+    .thumbnail-wrapper {
+        width: 100%;
+        aspect-ratio: 3/4;
+        position: relative;
+        overflow: hidden;
+        border-radius: 7px;
+        background: #f0f0f0;
+    }
+    
+    /* 스켈레톤 로딩 애니메이션 */
+    .thumbnail-skeleton {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            #f0f0f0 0%,
+            #e0e0e0 50%,
+            #f0f0f0 100%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes skeleton-loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+    
+    .webtoon-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .webtoon-thumbnail.loaded {
+        opacity: 1;
+    }
+    
+    .favorite-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255,255,255,0.95);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        font-size: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: transform 0.2s;
+        z-index: 10;
+    }
+    
+    .favorite-btn:hover {
+        transform: scale(1.1);
+    }
+</style>
+
 <div style="max-width:960px;margin:40px auto;">
     <h2 style="color:#4b3de3;">{{ platform }} 웹툰 목록</h2>
+    
     <form method="get" style="text-align:right; margin-bottom:18px;">
         <input type="hidden" name="platform" value="{{ platform }}">
         <input type="text" name="q" placeholder="작가/제목 검색" value="{{ query|default:'' }}"
                style="padding:5px 12px; border-radius:6px; border:1px solid #bdb8ec; width:220px;">
         <button type="submit" style="padding:5px 12px; border-radius:6px; border:none; background:#4b3de3; color:#fff;">검색</button>
     </form>
+    
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px;">
         {% for toon in webtoons %}
-            {% if toon.update_days or toon.updateDays %}
-                <div style="background:#fff;border-radius:10px;box-shadow:0 1px 8px #eee;padding:13px;">
-                    <a href="{{ toon.url }}" target="_blank">
-                        <img src="{% if toon.thumbnail %}{{ toon.thumbnail }}{% elif toon.thumbnail.0 %}{{ toon.thumbnail.0 }}{% endif %}"
-                             width="150" alt="썸네일"
-                             style="display:block;margin:auto;border-radius:7px;">
-                    </a>
-                    <div style="font-weight:bold;margin-top:7px;">{{ toon.title }}</div>
-                    <div style="color:#6767aa;">작가:
-                        {% if toon.authors %}
-                            {% if toon.authors.0 and toon.authors|length > 1 and toon.authors|slice:":2"|join:""|length > 2 %}
-                                {% for author in toon.authors %}
-                                    {{ author }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                {{ toon.authors }}
-                            {% endif %}
+            <div class="webtoon-card">
+                <!-- 즐겨찾기 버튼 -->
+                {% if user.is_authenticated %}
+                    <button class="favorite-btn" 
+                            data-webtoon-id="{{ toon.id }}"
+                            data-is-favorited="{% if user in toon.favorited_by.all %}true{% else %}false{% endif %}">
+                        {% if user in toon.favorited_by.all %}
+                            ⭐
                         {% else %}
-                            정보 없음
+                            ☆
                         {% endif %}
+                    </button>
+                {% endif %}
+                
+                <!-- 썸네일 (스켈레톤 로딩 포함) -->
+                <a href="{{ toon.url }}" target="_blank">
+                    <div class="thumbnail-wrapper">
+                        <div class="thumbnail-skeleton"></div>
+                        <img src="{{ toon.thumbnail }}" 
+                             alt="{{ toon.title }}" 
+                             class="webtoon-thumbnail"
+                             loading="lazy">
                     </div>
-                    <div style="color:#947dff; font-size:13px;">
-                        업데이트:
-                        {% if toon.update_days %}
-                            {{ toon.update_days }}
-                        {% else %}
-                            {% for d in toon.updateDays %}{{ d }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                        {% endif %}
-                    </div>
-                </div>
-            {% endif %}
+                </a>
+                
+                <div style="font-weight:bold;margin-top:7px;">{{ toon.title }}</div>
+                <div style="color:#6767aa;">작가: {{ toon.authors }}</div>
+                <div style="color:#947dff; font-size:13px;">업데이트: {{ toon.update_days }}</div>
+            </div>
         {% empty %}
             <div>웹툰 정보가 없습니다.</div>
         {% endfor %}
     </div>
 </div>
+
+<script>
+// CSRF 토큰 가져오기
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// 이미지 로딩 처리
+document.querySelectorAll('.webtoon-thumbnail').forEach(img => {
+    // 이미지가 이미 로드되었을 경우 (캐시)
+    if (img.complete) {
+        img.classList.add('loaded');
+        const skeleton = img.previousElementSibling;
+        if (skeleton) skeleton.style.display = 'none';
+    } else {
+        // 이미지 로드 완료 시
+        img.addEventListener('load', function() {
+            this.classList.add('loaded');
+            const skeleton = this.previousElementSibling;
+            if (skeleton) skeleton.style.display = 'none';
+        });
+        
+        // 이미지 로드 실패 시
+        img.addEventListener('error', function() {
+            const skeleton = this.previousElementSibling;
+            if (skeleton) {
+                skeleton.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;">이미지<br>로드 실패</div>';
+            }
+        });
+    }
+});
+
+// 즐겨찾기 버튼 이벤트
+document.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const webtoonId = this.dataset.webtoonId;
+        const isFavorited = this.dataset.isFavorited === 'true';
+        
+        // AJAX 요청
+        fetch(`/toons/webtoons/${webtoonId}/favorite/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 버튼 업데이트
+                if (data.is_favorited) {
+                    this.textContent = '⭐';
+                    this.dataset.isFavorited = 'true';
+                } else {
+                    this.textContent = '☆';
+                    this.dataset.isFavorited = 'false';
+                }
+                
+                // 버튼 애니메이션
+                this.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 200);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('즐겨찾기 처리 중 오류가 발생했습니다.');
+        });
+    });
+    
+    // 호버 효과
+    btn.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.1)';
+    });
+    
+    btn.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+});
+</script>
 {% endblock %}

@@ -1,4 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.db.models import Q
 import requests
 from .models import Webtoon
@@ -63,8 +65,74 @@ def webtoon_list(request):
         )
 
     webtoons = qs.all()
-    return render(request, 'toons/index.html', {
+
+    context = {
         'webtoons': webtoons,
         'platform': platform,
         'query': query,
-    })
+    }
+    return render(request, 'toons/index.html', context)
+    
+@login_required
+def toggle_favorite(request, webtoon_id):
+    """AJAX 즐겨찾기 토글"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST 요청만 가능합니다.'}, status=405)
+    
+    webtoon = get_object_or_404(Webtoon, id=webtoon_id)
+    
+    # 즐겨찾기 토글
+    if request.user in webtoon.favorited_by.all():
+        webtoon.favorited_by.remove(request.user)
+        is_favorited = False
+        message = '즐겨찾기에서 제거되었습니다.'
+    else:
+        webtoon.favorited_by.add(request.user)
+        is_favorited = True
+        message = '즐겨찾기에 추가되었습니다.'
+    
+    context = {
+        'success': True,
+        'is_favorited': is_favorited,
+        'message': message,
+        'favorites_count': webtoon.favorited_by.count()
+    }
+    
+    return JsonResponse(context)
+
+@login_required
+def my_page(request):
+    """마이페이지 - 탭별 콘텐츠"""
+    tab = request.GET.get('tab', 'interest')  # 기본 탭: 관심웹툰
+    platform = request.GET.get('platform', 'ALL')
+    query = request.GET.get('q', '')
+    
+    context = {
+        'current_tab': tab,
+        'platform': platform,
+        'query': query,
+    }
+    
+    if tab == 'interest':
+        # 관심웹툰(즐겨찾기) 목록
+        favorite_webtoons = request.user.favorite_webtoons.all()
+        
+        # 플랫폼 필터
+        if platform != 'ALL':
+            favorite_webtoons = favorite_webtoons.filter(provider=platform)
+        
+        # 검색
+        if query:
+            favorite_webtoons = favorite_webtoons.filter(
+                Q(title__icontains=query) | Q(authors__icontains=query)
+            )
+        
+        context['webtoons'] = favorite_webtoons
+    
+    # 추후 다른 탭 추가 가능
+    # elif tab == 'recent':
+    #     최근 본 웹툰
+    # elif tab == 'comments':
+    #     내가 단 댓글
+    
+    return render(request, 'toons/my_page.html', context)
