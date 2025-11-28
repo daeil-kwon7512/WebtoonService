@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h1>회원가입</h1>
+            <div id="error-msg" class="error-message" style="display:none;"></div>
+            <form id="signup-form">
+                <div class="form-group">
+                    <label for="username">아이디</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">이메일</label>
+                    <input type="email" id="email">
+                </div>
+                <div class="form-group">
+                    <label>성별</label>
+                    <div class="gender-group">
+                        <div class="gender-option">
+                            <input type="radio" name="gender" id="gender_male" value="M" required>
+                            <label for="gender_male">남성</label>
+                        </div>
+                        <div class="gender-option">
+                            <input type="radio" name="gender" id="gender_female" value="F" required>
+                            <label for="gender_female">여성</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password1">비밀번호</label>
+                    <input type="password" id="password1" required>
+                </div>
+                <div class="form-group">
+                    <label for="password2">비밀번호 확인</label>
+                    <input type="password" id="password2" required>
+                </div>
+                <button type="submit" class="btn-submit">가입하기</button>
+            </form>
+            <div class="auth-link">
+                이미 계정이 있으신가요? <a href="login.html">로그인</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.style.display = 'none';
+
+            const gender = document.querySelector('input[name="gender"]:checked');
+
+            try {
+                await api.signup({
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    gender: gender ? gender.value : '',
+                    password1: document.getElementById('password1').value,
+                    password2: document.getElementById('password2').value,
+                });
+                location.href = 'index.html';
+            } catch (err) {
+                let msg = '회원가입에 실패했습니다.';
+                if (err.data) {
+                    const errors = Object.values(err.data).flat();
+                    if (errors.length > 0) msg = errors.join(' ');
+                }
+                errorMsg.textContent = msg;
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
