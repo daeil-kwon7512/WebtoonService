@@ -1,6 +1,8 @@
+// js/api.js
+
 const API_BASE = 'http://127.0.0.1:8000/api';
 
-// CSRF 토큰 가져오기
+// 1) csrftoken 쿠키 읽기
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -16,58 +18,58 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// API 호출 공통 함수
-async function apiCall(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`;
-    const defaultOptions = {
-        credentials: 'include',  // 쿠키 포함
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken'),
-        },
+// 2) 공통 API 호출 함수
+async function apiCall(path, options = {}) {
+    const csrftoken = getCookie('csrftoken');
+
+    const baseHeaders = {
+        'Content-Type': 'application/json',
     };
 
-    const mergedOptions = {
-        ...defaultOptions,
+    // POST/PUT/PATCH/DELETE 같은 변경 요청에만 CSRF 헤더 추가
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        baseHeaders['X-CSRFToken'] = csrftoken || '';
+    }
+
+    const mergedHeaders = {
+        ...baseHeaders,
+        ...(options.headers || {}),
+    };
+
+    const res = await fetch(`${API_BASE}${path}`, {
+        credentials: 'include',
         ...options,
-        headers: {
-            ...defaultOptions.headers,
-            ...options.headers,
-        },
-    };
+        headers: mergedHeaders,
+    });
 
-    if (mergedOptions.body && typeof mergedOptions.body === 'object') {
-        mergedOptions.body = JSON.stringify(mergedOptions.body);
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`API ${res.status}: ${text}`);
     }
-
-    const response = await fetch(url, mergedOptions);
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw { status: response.status, data };
-    }
-
-    return data;
+    return res.json();
 }
 
-// API 함수들
-const api = {
-    // 인증
-    signup: (userData) => apiCall('/accounts/signup/', { method: 'POST', body: userData }),
-    login: (credentials) => apiCall('/accounts/login/', { method: 'POST', body: credentials }),
+// 3) 실제 API 래퍼들
+const Api = {
+    signup: (data) => apiCall('/accounts/signup/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    login: (data) => apiCall('/accounts/login/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
     logout: () => apiCall('/accounts/logout/', { method: 'POST' }),
-    getMe: () => apiCall('/accounts/me/'),
+    me: () => apiCall('/accounts/me/'),
 
-    // 웹툰
     getWebtoons: (params = {}) => {
         const query = new URLSearchParams(params).toString();
         return apiCall(`/webtoons/${query ? '?' + query : ''}`);
     },
-    getWebtoon: (id) => apiCall(`/webtoons/${id}/`),
-    toggleFavorite: (id) => apiCall(`/webtoons/${id}/favorite/`, { method: 'POST' }),
-
-    // 마이페이지
-    getMyFavorites: (params = {}) => {
+    toggleFavorite: (id) =>
+        apiCall(`/webtoons/${id}/favorite/`, { method: 'POST' }),
+    myFavorites: (params = {}) => {
         const query = new URLSearchParams(params).toString();
         return apiCall(`/me/favorites/${query ? '?' + query : ''}`);
     },

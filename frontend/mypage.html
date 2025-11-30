@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지 - 관심 웹툰</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;   /* 메인과 동일 */
+        }
+        .container {
+            max-width: 1200px;         /* 메인 .webtoon-grid와 비슷한 폭 */
+            margin: 0 auto;            /* 가운데 정렬 */
+            margin-top: 40px;          /* 네비 아래 여백 */
+            background: #ffffff;
+            padding: 24px 20px 32px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-size: 22px;
+            color: #111827;
+        }
+        .filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        select, input {
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 13px;
+        }
+        .webtoon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+        }
+        .webtoon-card {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .webtoon-card img {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .webtoon-card h3 {
+            font-size: 14px;
+            margin: 4px 0 0;
+            color: #111827;
+        }
+        .webtoon-card p {
+            font-size: 12px;
+            margin: 0;
+            color: #6b7280;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 11px;
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .loading {
+            text-align: center;
+            padding: 32px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: #ffffffcc;
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-weight: 700;
+            font-size: 18px;
+            color: #4f46e5;
+            text-decoration: none;
+        }
+        .nav-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .nav-link {
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 13px;
+            text-decoration: none;
+            color: #4b5563;
+        }
+        .nav-link:hover {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .nav-button {
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: none;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .nav-button:hover {
+            background: #4338ca;
+        }
+    </style>
+</head>
+<body>
+<div class="top-nav">
+    <div class="nav-left">
+        <a href="index.html" class="logo">웹툰 서비스</a>
+    </div>
+    <div class="nav-right">
+        <a href="index.html" class="nav-link">홈</a>
+        <a href="mypage.html" class="nav-link">마이페이지</a>
+        <a href="login.html" class="nav-link" id="login-link">로그인</a>
+        <button id="logout-btn" class="nav-button" style="display:none;">로그아웃</button>
+    </div>
+</div>
+
+<div class="container">
+    <h1>내 관심 웹툰</h1>
+
+    <div class="filters">
+        <select id="provider-filter">
+            <option value="">전체 플랫폼</option>
+            <option value="NAVER">네이버</option>
+            <option value="KAKAO">카카오</option>
+            <option value="KAKAO_PAGE">카카오페이지</option>
+        </select>
+
+        <select id="status-filter">
+            <option value="">전체 상태</option>
+            <option value="ongoing">연재중</option>
+            <option value="end">완결</option>
+        </select>
+
+        <input type="text" id="search-input" placeholder="제목/작가 검색" />
+    </div>
+
+    <div id="favorites-grid" class="webtoon-grid">
+        <div class="loading">관심 웹툰을 불러오는 중...</div>
+    </div>
+</div>
+
+<script>
+    // 로그인/메인에서 쓰던 getCookie 그대로 사용
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const API_BASE = 'http://127.0.0.1:8000/api';
+
+    async function loadFavorites() {
+        const grid = document.getElementById('favorites-grid');
+        grid.innerHTML = '<div class="loading">관심 웹툰을 불러오는 중...</div>';
+
+        const provider = document.getElementById('provider-filter').value;
+        const status = document.getElementById('status-filter').value;
+        const keyword = document.getElementById('search-input').value.trim();
+
+        const params = new URLSearchParams();
+        if (provider) params.append('provider', provider);
+        if (keyword) params.append('q', keyword);
+        if (status === 'ongoing') params.append('is_end', 'false');
+        if (status === 'end') params.append('is_end', 'true');
+
+        const csrftoken = getCookie('csrftoken');
+
+        try {
+            const res = await fetch(`${API_BASE}/me/favorites/?${params.toString()}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken || '',
+                },
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                grid.innerHTML = '<div class="loading">로그인이 필요합니다. 먼저 로그인해주세요.</div>';
+                return;
+            }
+
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('favorites error:', text);
+                grid.innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
+                return;
+            }
+
+            const data = await res.json();   // results, count 형태라고 가정
+            const list = data.results || data;  // 혹시 그냥 배열이면 그대로 사용
+
+            if (!list.length) {
+                grid.innerHTML = '<div class="loading">관심 웹툰이 없습니다.</div>';
+                return;
+            }
+
+            grid.innerHTML = '';
+            list.forEach(toon => {
+                const card = document.createElement('div');
+                card.className = 'webtoon-card';
+                card.innerHTML = `
+                    <a href="${toon.url}" target="_blank">
+                        <img src="${toon.thumbnail}" alt="${toon.title}">
+                    </a>
+                    <span class="tag">${toon.provider}</span>
+                    <h3>${toon.title}</h3>
+                    <p>${toon.authors}</p>
+                    <p>${toon.is_end ? '완결' : '연재중'} • ${toon.update_days || ''}</p>
+                `;
+                grid.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
+        }
+    }
+
+    // 필터/검색 이벤트
+    document.getElementById('provider-filter').addEventListener('change', loadFavorites);
+    document.getElementById('status-filter').addEventListener('change', loadFavorites);
+    document.getElementById('search-input').addEventListener('input', () => {
+        clearTimeout(window._favTimer);
+        window._favTimer = setTimeout(loadFavorites, 300);
+    });
+
+    // 페이지 로드 시 최초 호출
+    document.addEventListener('DOMContentLoaded', loadFavorites);
+    // 현재 로그인 상태 확인해서 네비 업데이트
+    async function updateNavAuth() {
+        const loginLink = document.getElementById('login-link');
+        const logoutBtn = document.getElementById('logout-btn');
+        if (!loginLink || !logoutBtn) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/accounts/me/`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+            });
+
+            if (res.ok) {
+                // 로그인 상태
+                loginLink.style.display = 'none';
+                logoutBtn.style.display = 'inline-flex';
+            } else {
+                // 비로그인 상태
+                loginLink.style.display = 'inline-flex';
+                logoutBtn.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('auth check error:', err);
+            loginLink.style.display = 'inline-flex';
+            logoutBtn.style.display = 'none';
+        }
+    }
+
+    // 로그아웃 클릭 시 처리
+    async function handleLogout() {
+        try {
+            const res = await fetch(`${API_BASE}/accounts/logout/`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+            });
+            // 어차피 세션만 날리면 되니까 상태코드 상관없이 메인으로
+        } catch (err) {
+            console.error('logout error:', err);
+        } finally {
+            window.location.href = 'index.html';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', handleLogout);
+        }
+        updateNavAuth();
+    });
+</script>
+</body>
+</html>

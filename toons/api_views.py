@@ -1,0 +1,148 @@
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from django.db.models import Q
+from .models import Webtoon
+from .serializers import WebtoonSerializer
+import requests
+from django.core.paginator import Paginator
+
+PLATFORM_API = {
+    'NAVER': 'https://korea-webtoon-api.onrender.com/webtoons?provider=NAVER&page={page}&perPage=100&sort=ASC',
+    'KAKAO': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO&page={page}&perPage=100&sort=ASC',
+    'KAKAO_PAGE': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO_PAGE&page={page}&perPage=100&sort=ASC'
+}
+
+def sync_webtoons(provider):
+    """외부 API에서 웹툰 데이터 가져와서 DB에 저장"""
+    for page in range(1, 51):  # 1~50페이지
+        url = PLATFORM_API[provider].format(page=page)
+        try:
+            response = requests.get(url, timeout=10)
+            data = response.json()
+            webtoons = data.get('webtoons', [])
+            
+            if not webtoons:  # 빈 페이지면 종료
+                break
+            
+            for toon in webtoons:
+                # updateDays 있는 것만 저장
+                if not toon.get('updateDays'):
+                    continue
+                
+                Webtoon.objects.update_or_create(
+                    url=toon['url'],
+                    defaults={
+                        'provider': provider,
+                        'title': toon['title'].strip(),
+                        'authors': ', '.join(toon.get('authors', [])),
+                        'update_days': ','.join(toon['updateDays']),
+                        'thumbnail': toon['thumbnail'][0] if toon.get('thumbnail') else '',
+                        'is_end': toon.get('isEnd', False),
+                    }
+                )
+        except Exception as e:
+            print(f"Error syncing {provider} page {page}: {e}")
+            break
+    
+    print(f"{provider} 동기화 완료!")
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def webtoon_list(request):
+    """웹툰 목록 조회 (페이징 추가)"""
+    provider = request.GET.get('provider', 'NAVER')
+    q = request.GET.get('q', '')
+    page_num = int(request.GET.get('page', 1))
+    per_page = int(request.GET.get('per_page', 100))  # 한 페이지에 100개씩
+    
+    # DB에 해당 플랫폼 웹툰이 없으면 동기화
+    if not Webtoon.objects.filter(provider=provider).exists():
+        from .views import sync_webtoons
+        sync_webtoons(provider)
+    
+    webtoons = Webtoon.objects.filter(provider=provider).exclude(update_days='')
+    
+    # 카카오/카카오페이지는 연재중만
+    if provider in ['KAKAO', 'KAKAO_PAGE']:
+        webtoons = webtoons.filter(is_end=False)
+    
+    # 검색
+    if q:
+        webtoons = webtoons.filter(
+            Q(title__icontains=q) | Q(authors__icontains=q)
+        )
+    
+    # 페이징
+    paginator = Paginator(webtoons, per_page)
+    page_obj = paginator.get_page(page_num)
+    
+    serializer = WebtoonSerializer(page_obj, many=True, context={'request': request})
+    
+    return Response({
+        'count': paginator.count,
+        'total_pages': paginator.num_pages,
+        'current_page': page_num,
+        'results': serializer.data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def webtoon_detail(request, webtoon_id):
+    """웹툰 상세 조회"""
+    try:
+        webtoon = Webtoon.objects.get(id=webtoon_id)
+    except Webtoon.DoesNotExist:
+        return Response({'error': '웹툰을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = WebtoonSerializer(webtoon, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_favorite(request, webtoon_id):
+    """즐겨찾기 토글"""
+    try:
+        webtoon = Webtoon.objects.get(id=webtoon_id)
+    except Webtoon.DoesNotExist:
+        return Response({'error': '웹툰을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if webtoon.favorited_by.filter(id=request.user.id).exists():
+        webtoon.favorited_by.remove(request.user)
+        is_favorited = False
+        message = '즐겨찾기 해제'
+    else:
+        webtoon.favorited_by.add(request.user)
+        is_favorited = True
+        message = '즐겨찾기 추가'
+    
+    return Response({
+        'message': message,
+        'is_favorited': is_favorited,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_favorites(request):
+    """내 즐겨찾기 목록"""
+    provider = request.GET.get('provider')
+    q = request.GET.get('q', '')
+    
+    favorites = request.user.favorite_webtoons.all()
+    
+    # 플랫폼 필터
+    if provider and provider != 'ALL':
+        favorites = favorites.filter(provider=provider)
+    
+    # 검색
+    if q:
+        favorites = favorites.filter(
+            Q(title__icontains=q) | Q(authors__icontains=q)
+        )
+    
+    serializer = WebtoonSerializer(favorites, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
