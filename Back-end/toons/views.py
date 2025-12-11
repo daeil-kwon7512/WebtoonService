@@ -55,7 +55,7 @@ def webtoon_list(request):
     # [2] DB에서 검색·필터링
     qs = Webtoon.objects.filter(provider=platform).exclude(update_days='')
     
-    if platform in ['KAKAO', 'KAKAO_PAGE']:
+    if platform in ['KAKAO', 'KAKAOPAGE']:
         qs = qs.filter(is_end=False)
 
     if query:

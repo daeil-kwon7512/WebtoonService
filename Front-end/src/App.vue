@@ -177,7 +177,7 @@ onMounted(() => {
       <!-- Filter Buttons -->
       <div class="flex flex-wrap justify-center gap-3 mb-12">
         <button 
-          v-for="provider in ['NAVER', 'KAKAO', 'KAKAO_PAGE']" 
+          v-for="provider in ['NAVER', 'KAKAO', 'KAKAOPAGE']" 
           :key="provider"
           @click="loadWebtoons(provider)"
           :class="[
@@ -187,7 +187,7 @@ onMounted(() => {
               : 'bg-white text-text-muted hover:bg-gray-50 border border-gray-200'
           ]"
         >
-          {{ provider === 'KAKAO_PAGE' ? '카카오페이지' : (provider === 'NAVER' ? '네이버' : '카카오') }}
+          {{ provider === 'KAKAOPAGE' ? '카카오페이지' : (provider === 'NAVER' ? '네이버' : '카카오') }}
         </button>
       </div>
 
