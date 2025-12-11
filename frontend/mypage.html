@@ -147,7 +147,7 @@
             <option value="">전체 플랫폼</option>
             <option value="NAVER">네이버</option>
             <option value="KAKAO">카카오</option>
-            <option value="KAKAO_PAGE">카카오페이지</option>
+            <option value="KAKAOPAGE">카카오페이지</option>
         </select>
 
         <select id="status-filter">
@@ -239,7 +239,7 @@
                     </a>
                     <span class="tag">${toon.provider}</span>
                     <h3>${toon.title}</h3>
-                    <p>${toon.authors}</p>
+                    <p>${toon.writers}</p>
                     <p>${toon.is_end ? '완결' : '연재중'} • ${toon.update_days || ''}</p>
                 `;
                 grid.appendChild(card);

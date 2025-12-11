@@ -165,7 +165,7 @@
     <div class="filter-buttons">
         <button onclick="loadWebtoons('NAVER')">네이버</button>
         <button onclick="loadWebtoons('KAKAO')">카카오</button>
-        <button onclick="loadWebtoons('KAKAO_PAGE')">카카오페이지</button>
+        <button onclick="loadWebtoons('KAKAOPAGE')">카카오페이지</button>
     </div>
 
     <div id="webtoon-grid" class="webtoon-grid">
@@ -229,7 +229,7 @@
                         </button>
                     </div>
                     <h3>${toon.title}</h3>
-                    <p>${toon.authors}</p>
+                    <p>${toon.wirters}</p>
                     <p style="color: #947dff; font-size: 13px;">${toon.update_days}</p>
                 `;
                 grid.appendChild(card);
@@ -312,7 +312,7 @@
                     credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken') || '',
+                        // 'X-CSRFToken': getCookie('csrftoken') || '',
                     },
                 });
 

@@ -10,11 +10,11 @@ class WebtoonSerializer(serializers.ModelSerializer):
             'id',
             'provider',
             'title',
-            'authors',
+            'writers',       # authors 대신 모델 필드명에 맞게
             'update_days',
             'thumbnail',
             'url',
-            'is_end',
+            'is_adult',      # is_end → is_adult 로 교체
             'is_favorited',
         ]
 

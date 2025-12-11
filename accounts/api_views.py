@@ -4,10 +4,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate, login, logout
 from .serializers import UserSerializer, SignUpSerializer, LoginSerializer
+# 임시로 csrf 검증 비활성
+from django.views.decorators.csrf import csrf_exempt
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt   
 def me_view(request):
     """내 정보 조회"""
     serializer = UserSerializer(request.user)
@@ -16,6 +19,7 @@ def me_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt   
 def signup_view(request):
     """회원가입"""
     serializer = SignUpSerializer(data=request.data)
@@ -31,6 +35,7 @@ def signup_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@csrf_exempt   
 def login_view(request):
     """로그인"""
     serializer = LoginSerializer(data=request.data)
@@ -55,6 +60,7 @@ def login_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@csrf_exempt   
 def logout_view(request):
     """로그아웃"""
     logout(request)

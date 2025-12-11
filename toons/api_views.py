@@ -3,50 +3,86 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
-from .models import Webtoon
+from .models import Webtoon, Genre
 from .serializers import WebtoonSerializer
 import requests
 from django.core.paginator import Paginator
+import pandas as pd
 
-PLATFORM_API = {
-    'NAVER': 'https://korea-webtoon-api.onrender.com/webtoons?provider=NAVER&page={page}&perPage=100&sort=ASC',
-    'KAKAO': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO&page={page}&perPage=100&sort=ASC',
-    'KAKAO_PAGE': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO_PAGE&page={page}&perPage=100&sort=ASC'
-}
+# PLATFORM_API = {
+#     'NAVER': 'https://korea-webtoon-api.onrender.com/webtoons?provider=NAVER&page={page}&perPage=100&sort=ASC',
+#     'KAKAO': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO&page={page}&perPage=100&sort=ASC',
+#     'KAKAO_PAGE': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO_PAGE&page={page}&perPage=100&sort=ASC'
+# }
 
-def sync_webtoons(provider):
-    """외부 API에서 웹툰 데이터 가져와서 DB에 저장"""
-    for page in range(1, 51):  # 1~50페이지
-        url = PLATFORM_API[provider].format(page=page)
-        try:
-            response = requests.get(url, timeout=10)
-            data = response.json()
-            webtoons = data.get('webtoons', [])
+# def sync_webtoons(provider):
+#     """외부 API에서 웹툰 데이터 가져와서 DB에 저장"""
+#     for page in range(1, 51):  # 1~50페이지
+#         url = PLATFORM_API[provider].format(page=page)
+#         try:
+#             response = requests.get(url, timeout=10)
+#             data = response.json()
+#             webtoons = data.get('webtoons', [])
             
-            if not webtoons:  # 빈 페이지면 종료
-                break
+#             if not webtoons:  # 빈 페이지면 종료
+#                 break
             
-            for toon in webtoons:
-                # updateDays 있는 것만 저장
-                if not toon.get('updateDays'):
-                    continue
+#             for toon in webtoons:
+#                 # updateDays 있는 것만 저장
+#                 if not toon.get('updateDays'):
+#                     continue
                 
-                Webtoon.objects.update_or_create(
-                    url=toon['url'],
-                    defaults={
-                        'provider': provider,
-                        'title': toon['title'].strip(),
-                        'authors': ', '.join(toon.get('authors', [])),
-                        'update_days': ','.join(toon['updateDays']),
-                        'thumbnail': toon['thumbnail'][0] if toon.get('thumbnail') else '',
-                        'is_end': toon.get('isEnd', False),
-                    }
-                )
-        except Exception as e:
-            print(f"Error syncing {provider} page {page}: {e}")
-            break
+#                 Webtoon.objects.update_or_create(
+#                     url=toon['url'],
+#                     defaults={
+#                         'provider': provider,
+#                         'title': toon['title'].strip(),
+#                         'authors': ', '.join(toon.get('authors', [])),
+#                         'update_days': ','.join(toon['updateDays']),
+#                         'thumbnail': toon['thumbnail'][0] if toon.get('thumbnail') else '',
+#                         'is_end': toon.get('isEnd', False),
+#                     }
+#                 )
+#         except Exception as e:
+#             print(f"Error syncing {provider} page {page}: {e}")
+#             break
     
-    print(f"{provider} 동기화 완료!")
+#     print(f"{provider} 동기화 완료!")
+
+def import_webtoons_from_csv(csv_path: str):
+    df = pd.read_csv(csv_path)
+    df = df.fillna('')
+
+    created_count = 0
+
+    for row in df.itertuples(index=False):
+        webtoon, created = Webtoon.objects.get_or_create(
+            provider=row.provider,
+            title=row.titleName,
+            url=row.Url,
+            defaults={
+                'writers': row.Writer,
+                'painters': row.Painter,
+                'original_author': row.Original,
+                'update_days': row.day,
+                'thumbnail': row.thumbnailUrl,
+                'is_adult': bool(row.is_adult),
+                'synopsis': row.synopsis,
+            }
+        )
+
+        # 장르 M2M 연결
+        genre_text = row.genre
+        if genre_text:
+            names = [g.strip() for g in str(genre_text).split(',') if g.strip()]
+            for name in names:
+                genre_obj, _ = Genre.objects.get_or_create(tag=name)
+                webtoon.genres.add(genre_obj)
+
+        if created:
+            created_count += 1
+
+    return created_count
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -59,19 +95,20 @@ def webtoon_list(request):
     
     # DB에 해당 플랫폼 웹툰이 없으면 동기화
     if not Webtoon.objects.filter(provider=provider).exists():
-        from .views import sync_webtoons
-        sync_webtoons(provider)
+        # from .views import import_webtoons_from_csv
+        import_webtoons_from_csv(".\\crawling\\all_webtoons.csv")
     
-    webtoons = Webtoon.objects.filter(provider=provider).exclude(update_days='')
+    webtoons = Webtoon.objects.filter(provider=provider).exclude(update_days='').order_by('-id')
     
     # 카카오/카카오페이지는 연재중만
-    if provider in ['KAKAO', 'KAKAO_PAGE']:
-        webtoons = webtoons.filter(is_end=False)
+    # if provider in ['KAKAO', 'KAKAOPAGE']:
+    # 성인웹툰은 빼고
+    webtoons = webtoons.filter(is_adult=False)
     
     # 검색
     if q:
         webtoons = webtoons.filter(
-            Q(title__icontains=q) | Q(authors__icontains=q)
+            Q(title__icontains=q) # | Q(authors__icontains=q)
         )
     
     # 페이징

@@ -60,7 +60,9 @@ const Api = {
         method: 'POST',
         body: JSON.stringify(data),
     }),
-    logout: () => apiCall('/accounts/logout/', { method: 'POST' }),
+    logout: () => {
+        return apiCall('/accounts/logout/', { method: 'POST' });
+    },
     me: () => apiCall('/accounts/me/'),
 
     getWebtoons: (params = {}) => {

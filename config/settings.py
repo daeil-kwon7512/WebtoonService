@@ -133,7 +133,21 @@ WEBTOON_API_TIMEOUT = 6  # seconds
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+# REST Framework 설정
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 세션을 통한 인증 (Django 기본)
+        'rest_framework.authentication.SessionAuthentication', 
+    ],
+    # 권한 설정 (기본적으로 인증된 사용자만 접근 가능하도록 설정)
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ]
+}
+
 # CORS_ALLOW_ALL_ORIGINS = True
+CSRF_COOKIE_HTTPONLY = False
+
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",

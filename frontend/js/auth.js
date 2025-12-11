@@ -1,13 +1,3 @@
-// 현재 로그인 상태 확인
-async function checkAuth() {
-    try {
-        const user = await api.getMe();
-        return user;
-    } catch (e) {
-        return null;
-    }
-}
-
 // 네비게이션 업데이트
 async function updateNavbar() {
     const authArea = document.getElementById('navbar-auth');

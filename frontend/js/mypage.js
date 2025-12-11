@@ -54,7 +54,7 @@ function createFavoriteCard(toon) {
 
     const author = document.createElement('div');
     author.className = 'webtoon-author';
-    author.textContent = toon.authors;
+    author.textContent = toon.writers;
     card.appendChild(author);
 
     const days = document.createElement('div');
