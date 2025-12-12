@@ -14,7 +14,8 @@ class WebtoonSerializer(serializers.ModelSerializer):
             'update_days',
             'thumbnail',
             'url',
-            'is_adult',      # is_end → is_adult 로 교체
+            'is_adult',
+            'is_up',
             'is_favorited',
         ]
 

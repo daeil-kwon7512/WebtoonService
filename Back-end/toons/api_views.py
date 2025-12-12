@@ -70,6 +70,7 @@ def import_webtoons_from_csv(csv_path: str):
                 'thumbnail': row.thumbnailUrl,
                 'is_adult': bool(row.is_adult),
                 'synopsis': row.synopsis,
+                'is_up': bool(row.is_up),
             }
         )
 
