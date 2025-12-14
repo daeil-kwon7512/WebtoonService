@@ -11,6 +11,10 @@ import pandas as pd
 from django.conf import settings
 from pathlib import Path
 
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
 # PLATFORM_API = {
 #     'NAVER': 'https://korea-webtoon-api.onrender.com/webtoons?provider=NAVER&page={page}&perPage=100&sort=ASC',
 #     'KAKAO': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO&page={page}&perPage=100&sort=ASC',
@@ -196,3 +200,184 @@ def my_favorites(request):
     
     serializer = WebtoonSerializer(favorites, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# 추천 시스템 기능
+
+def get_webtoon_dataframe():
+    """DB에서 웹툰 데이터를 가져와 DataFrame으로 변환"""
+    # 데이터 분석용으로는 필요한 필드만 최소한으로 가져옵니다.
+    webtoons = Webtoon.objects.all().prefetch_related('genres')
+    
+    data = []
+    for w in webtoons:
+        # Genre 모델의 필드명이 'tag'라고 가정
+        genre_list = [g.tag for g in w.genres.all()] if hasattr(w, 'genres') else []
+        genre_str = " ".join(genre_list)
+        
+        # 썸네일 URL 처리
+        thumbnail = w.thumbnail if hasattr(w, 'thumbnail') and w.thumbnail else ""
+
+        data.append({
+            'id': w.id,
+            'title': w.title,
+            'synopsis': w.synopsis if hasattr(w, 'synopsis') and w.synopsis else "", 
+            'genres': genre_str,
+            'thumbnail_url': thumbnail
+        })
+    
+    return pd.DataFrame(data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recommend_by_favorites(request):
+    """
+    [장르 기반 추천]
+    사용자가 즐겨찾기한 웹툰들의 장르(tag)를 분석하여 추천
+    반환 시 WebtoonSerializer를 사용하여 전체 정보를 포함합니다.
+    """
+    user = request.user
+    favorites = user.favorite_webtoons.all().order_by('-id')
+
+    if not favorites.exists():
+        return Response({'message': '즐겨찾기한 웹툰이 없어 추천할 수 없습니다.'}, status=status.HTTP_200_OK)
+
+    # 1. 전체 웹툰 데이터 로드
+    df = get_webtoon_dataframe()
+    
+    if df.empty:
+        return Response({'message': '데이터가 없습니다.'}, status=status.HTTP_200_OK)
+
+    # 2. 사용자 프로필 생성
+    user_favorite_genres = []
+    
+    for i, w in enumerate(favorites):
+        genres = [g.tag for g in w.genres.all()]
+        genre_str = " ".join(genres)
+        
+        # [가중치] 최신순 가중치
+        if i < 3:
+            weight = 3
+        elif i < 10:
+            weight = 2
+        else:
+            weight = 1
+            
+        weighted_genre_str = (genre_str + " ") * weight
+        user_favorite_genres.append(weighted_genre_str)
+    
+    user_profile_soup = " ".join(user_favorite_genres)
+
+    # 3. 벡터화 및 유사도 계산
+    try:
+        tfidf = TfidfVectorizer()
+        tfidf_matrix = tfidf.fit_transform(df['genres'])
+        user_vector = tfidf.transform([user_profile_soup])
+        cosine_sim = cosine_similarity(user_vector, tfidf_matrix).flatten()
+
+        # 4. 정렬 및 추천 대상 ID 추출
+        sim_indices = cosine_sim.argsort()[::-1]
+        favorite_ids = set(favorites.values_list('id', flat=True))
+
+        target_ids = []
+        target_scores = {}
+
+        for idx in sim_indices:
+            webtoon_id = df.iloc[idx]['id']
+            
+            # 이미 본 웹툰 제외
+            if webtoon_id in favorite_ids:
+                continue
+                
+            score = cosine_sim[idx]
+            if score == 0: continue
+
+            target_ids.append(webtoon_id)
+            target_scores[webtoon_id] = score
+
+            if len(target_ids) >= 10:
+                break
+        
+        # 5. DB에서 추천된 웹툰 객체 조회 및 직렬화
+        # id__in으로 한 번에 조회하여 DB 부하를 줄임
+        recommended_webtoons = Webtoon.objects.filter(id__in=target_ids).prefetch_related('genres')
+        
+        # 순서 보장을 위해 딕셔너리로 매핑
+        webtoon_map = {w.id: w for w in recommended_webtoons}
+        
+        recommendations = []
+        for w_id in target_ids:
+            webtoon = webtoon_map.get(w_id)
+            if webtoon:
+                # 기존 Serializer 사용 (모든 정보 포함)
+                serializer = WebtoonSerializer(webtoon, context={'request': request})
+                data = serializer.data
+                # 계산된 점수 추가
+                data['match_score'] = round(target_scores[w_id] * 100, 1)
+                recommendations.append(data)
+            
+        return Response(recommendations, status=status.HTTP_200_OK)
+        
+    except ValueError:
+        return Response({'message': '추천을 위한 데이터가 충분하지 않습니다.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def recommend_by_synopsis(request, webtoon_id):
+    """
+    줄거리(synopsis) 기반 유사 웹툰 추천
+    반환 시 WebtoonSerializer를 사용하여 전체 정보를 포함합니다.
+    """
+    df = get_webtoon_dataframe()
+    
+    if df.empty:
+        return Response({'error': '데이터가 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if int(webtoon_id) not in df['id'].values:
+        return Response({'error': '해당 웹툰을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+    synopses = df['synopsis'].fillna('')
+    
+    try:
+        tfidf = TfidfVectorizer(min_df=1)
+        tfidf_matrix = tfidf.fit_transform(synopses)
+
+        target_idx = df[df['id'] == int(webtoon_id)].index[0]
+        cosine_sim = cosine_similarity(tfidf_matrix[target_idx], tfidf_matrix).flatten()
+
+        sim_indices = cosine_sim.argsort()[::-1]
+
+        target_ids = []
+        target_scores = {}
+
+        # 자기 자신(0번)은 제외하고 1번부터 시작
+        for idx in sim_indices[1:]:
+            score = cosine_sim[idx]
+            if score < 0.05: continue
+            
+            w_id = df.iloc[idx]['id']
+            target_ids.append(w_id)
+            target_scores[w_id] = score
+            
+            if len(target_ids) >= 10:
+                break
+
+        # DB 조회 및 직렬화
+        recommended_webtoons = Webtoon.objects.filter(id__in=target_ids).prefetch_related('genres')
+        webtoon_map = {w.id: w for w in recommended_webtoons}
+
+        recommendations = []
+        for w_id in target_ids:
+            webtoon = webtoon_map.get(w_id)
+            if webtoon:
+                serializer = WebtoonSerializer(webtoon, context={'request': request})
+                data = serializer.data
+                data['similarity'] = round(target_scores[w_id] * 100, 1)
+                recommendations.append(data)
+
+        return Response(recommendations, status=status.HTTP_200_OK)
+
+    except ValueError:
+        return Response({'message': '줄거리 데이터가 부족하여 분석할 수 없습니다.'}, status=status.HTTP_200_OK)
