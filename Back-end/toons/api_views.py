@@ -15,46 +15,6 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-# PLATFORM_API = {
-#     'NAVER': 'https://korea-webtoon-api.onrender.com/webtoons?provider=NAVER&page={page}&perPage=100&sort=ASC',
-#     'KAKAO': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO&page={page}&perPage=100&sort=ASC',
-#     'KAKAO_PAGE': 'https://korea-webtoon-api.onrender.com/webtoons?provider=KAKAO_PAGE&page={page}&perPage=100&sort=ASC'
-# }
-
-# def sync_webtoons(provider):
-#     """외부 API에서 웹툰 데이터 가져와서 DB에 저장"""
-#     for page in range(1, 51):  # 1~50페이지
-#         url = PLATFORM_API[provider].format(page=page)
-#         try:
-#             response = requests.get(url, timeout=10)
-#             data = response.json()
-#             webtoons = data.get('webtoons', [])
-            
-#             if not webtoons:  # 빈 페이지면 종료
-#                 break
-            
-#             for toon in webtoons:
-#                 # updateDays 있는 것만 저장
-#                 if not toon.get('updateDays'):
-#                     continue
-                
-#                 Webtoon.objects.update_or_create(
-#                     url=toon['url'],
-#                     defaults={
-#                         'provider': provider,
-#                         'title': toon['title'].strip(),
-#                         'authors': ', '.join(toon.get('authors', [])),
-#                         'update_days': ','.join(toon['updateDays']),
-#                         'thumbnail': toon['thumbnail'][0] if toon.get('thumbnail') else '',
-#                         'is_end': toon.get('isEnd', False),
-#                     }
-#                 )
-#         except Exception as e:
-#             print(f"Error syncing {provider} page {page}: {e}")
-#             break
-    
-#     print(f"{provider} 동기화 완료!")
-
 def import_webtoons_from_csv(csv_path: str):
     df = pd.read_csv(csv_path)
     df = df.fillna('')
