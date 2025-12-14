@@ -1,8 +1,9 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'   // 아직 없다면 생성 필요
-import SignupView from '../views/SignupView.vue' // 아직 없다면 생성 필요
+import HomeView from '@/views/HomeView.vue'
+import LoginView from '@/views/LoginView.vue'  
+import SignupView from '@/views/SignupView.vue'
+import SearchView  from '@/views/SearchView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,7 +22,12 @@ const router = createRouter({
       path: '/signup',
       name: 'signup',
       component: SignupView
-    }
+    },
+    {
+      path: '/search',
+      name: 'Search',
+      component: SearchView,
+    },
   ]
 })
 

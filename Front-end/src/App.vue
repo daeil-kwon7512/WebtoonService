@@ -7,10 +7,16 @@ import { useRouter } from 'vue-router';
 const authStore = useAuthStore();
 const router = useRouter();
 
-onMounted(() => {
+// onMounted(() => {
+//   // 앱 시작 시 토큰 체크하여 로그인 유지
+//   authStore.initializeAuth();
+// });
+onMounted(async () => {
   // 앱 시작 시 토큰 체크하여 로그인 유지
-  authStore.initializeAuth();
-});
+  console.log('App mounted')
+  await authStore.initializeAuth()
+  console.log('initializeAuth done, isAuthenticated =', authStore.isAuthenticated)
+})
 
 const handleLogout = async () => {
   if (!confirm('정말 로그아웃 하시겠습니까?')) return;
