@@ -268,7 +268,7 @@ def Naver_webtoon_crawler():
     )
 
     naver_webtoons = webtoon_df.merge(wk_agg, on="titleId", how="left") 
-    
+    naver_webtoons = naver_webtoons.drop(["finish"], axis=1)
     naver = naver_webtoons.rename(columns={
         "url": "Url",
         "adult": "is_adult",
@@ -1590,6 +1590,8 @@ if __name__ == '__main__':
         on="titleName",
         how="left",
     )
+    
+    all_webtoons = all_webtoons.drop(['titleId'], axis=1)
     
     # JSON 파일 저장
     # orient='records': 각 행을 JSON 객체로 만들어 리스트 형태로 저장 (웹 API에 가장 적합한 형태)
