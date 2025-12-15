@@ -1,10 +1,8 @@
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenBlacklistView,
-)
-from .api_views import me_view, signup_view
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
+from .api_views import me_view, signup_view, survey_submit_view
+
+
 urlpatterns = [
     # 커스텀 뷰 연결
     path('me/', me_view, name='api-me'),    # 내정보 조회
@@ -17,4 +15,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # 로그아웃 (Refresh Token 차단)
     path('logout/', TokenBlacklistView.as_view(), name='api-logout'),
+    
+    # 설문조사 결과 제출
+    path('survey/submit/', survey_submit_view, name='api-survey-submit'), # 추가됨
 ]

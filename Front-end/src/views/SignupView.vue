@@ -36,12 +36,13 @@ const handleSignup = async () => {
     gender: formData.value.gender,
   };
 
-  // 3. 회원가입 요청
+  // 3. 회원가입 요청 // [수정됨] 가입 후 설문조사 페이지로 이동
   const success = await authStore.register(payload);
 
   if (success) {
-    alert('회원가입이 완료되었습니다! 로그인해주세요.');
-    router.push('/login');
+    // [수정됨] 회원가입 성공 시 바로 설문조사 페이지로 이동
+    // (신규 유저는 무조건 설문 미완료 상태이므로 검사 불필요)
+    router.push({ name: 'survey' });
   } else {
     // 에러 처리 (서버에서 받은 객체 형태에 따라 파싱 필요할 수 있음)
     // 예: { username: ["이미 존재하는 아이디입니다."] }

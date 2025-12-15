@@ -10,6 +10,9 @@ from django.core.paginator import Paginator
 import pandas as pd
 from django.conf import settings
 from pathlib import Path
+from .models import SurveyCandidateWebtoon
+from .serializers import SurveyCandidateSerializer
+
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -191,6 +194,27 @@ def my_favorites(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# 설문 후보 웹툰 리스트 반환
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def survey_candidates_view(request):
+    """
+    설문조사용 웹툰 후보 반환
+    URL param으로 count를 받으면 그만큼, 없으면 기본 10개 반환
+    예: /api/survey/candidates/?count=5
+    """
+    # 프론트에서 요청한 개수 확인 (기본값 10)
+    count = int(request.GET.get('count', 10))
+    
+    # 너무 많이 요청하는 것 방지 (최대 50개 제한)
+    if count > 50:
+        count = 50
+
+    # 랜덤 정렬 후 슬라이싱
+    candidates = SurveyCandidateWebtoon.objects.all().order_by('?')[:count]
+    serializer = SurveyCandidateSerializer(candidates, many=True)
+    
+    return Response(serializer.data)
 # 추천 시스템 기능
 
 def get_webtoon_dataframe():

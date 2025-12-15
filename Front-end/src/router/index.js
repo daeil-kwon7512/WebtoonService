@@ -1,8 +1,9 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
-import LoginView from '@/views/LoginView.vue'  
-import SignupView from '@/views/SignupView.vue'
+import HomeView from '../views/HomeView.vue'
+import LoginView from '../views/LoginView.vue'   // 아직 없다면 생성 필요
+import SignupView from '../views/SignupView.vue' // 아직 없다면 생성 필요
+import SurveyView from '../views/SurveyView.vue' // [추가]
 import SearchView  from '@/views/SearchView.vue'
 
 const router = createRouter({
@@ -22,6 +23,12 @@ const router = createRouter({
       path: '/signup',
       name: 'signup',
       component: SignupView
+    },
+    // [추가] 설문조사 페이지 라우트
+    {
+      path: '/survey',
+      name: 'survey',
+      component: SurveyView
     },
     {
       path: '/search',
