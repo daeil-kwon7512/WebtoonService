@@ -54,16 +54,26 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // 3. 회원가입
+    // 3. 회원가입 (+자동 로그인 처리)
     async register(userData) {
       this.loading = true;
       this.error = null;
       try {
-        // userData는 { username, password, email, gender ... }
-        await axios.post('/api/accounts/signup/', userData);
-        return true;
+        // 1. API 요청
+        const response = await axios.post('/api/accounts/signup/', userData);
+        
+        // 2. [수정됨] 응답으로 온 토큰 저장 (자동 로그인)
+        const { access, refresh, user } = response.data;
+        
+        localStorage.setItem('accessToken', access);
+        localStorage.setItem('refreshToken', refresh);
+
+        // 3. 상태 업데이트
+        this.user = user;
+        this.isAuthenticated = true;
+        
+        return true; // 성공
       } catch (err) {
-        // 서버에서 오는 에러 메시지 처리 (예: 이미 존재하는 아이디)
         this.error = err.response?.data || '회원가입 실패';
         console.error(err);
         return false;
