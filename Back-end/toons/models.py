@@ -20,6 +20,7 @@ class Webtoon(models.Model):
     is_adult = models.BooleanField(default=False)
     synopsis = models.TextField()
     genres = models.ManyToManyField(Genre, related_name='webtoons', blank=True)
+    is_up = models.BooleanField(default=False)
 
     # ManyToMany로 즐겨찾기 관계 설정
     favorited_by = models.ManyToManyField(

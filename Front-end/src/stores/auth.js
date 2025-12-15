@@ -2,6 +2,15 @@
 import { defineStore } from 'pinia';
 import axios from '@/api/axios'; // 방금 만든 axios 인스턴스 import
 
+// axios 헤더에 토큰 심어주는 함수
+function setAuthHeader(token) {
+  if (token) {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`
+  } else {
+    delete axios.defaults.headers.common.Authorization
+  }
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,          // 유저 정보 (username, email 등)
@@ -26,6 +35,7 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('accessToken', access);
         localStorage.setItem('refreshToken', refresh);
 
+        setAuthHeader(access)
         this.isAuthenticated = true;
         
         // 로그인 성공 후 내 정보 가져오기
@@ -107,15 +117,33 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = false;
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        setAuthHeader(null);
       }
     },
     
     // 5. 앱 시작 시 토큰 체크 (App.vue에서 호출)
-    initializeAuth() {
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        this.fetchUser();
+    async initializeAuth() {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        this.user = null
+        this.isAuthenticated = false
+        setAuthHeader(null)
+        return
       }
-    }
+
+      // 토큰만 있으면 우선 로그인 상태로 본다
+      setAuthHeader(token)
+      this.isAuthenticated = true
+
+      try {
+        const res = await axios.get('/accounts/me/')
+        this.user = res.data
+      } catch (err) {
+        // 토큰이 진짜로 잘못됐을 때만 로그아웃
+        this.user = null
+        this.isAuthenticated = false
+        this.logout()
+      }
+    },
   },
 });

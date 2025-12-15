@@ -4,6 +4,7 @@ from .models import Webtoon, SurveyCandidateWebtoon
 
 class WebtoonSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
+    authors_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Webtoon
@@ -11,12 +12,13 @@ class WebtoonSerializer(serializers.ModelSerializer):
             'id',
             'provider',
             'title',
-            'writers',       # authors 대신 모델 필드명에 맞게
             'update_days',
             'thumbnail',
             'url',
-            'is_adult',      # is_end → is_adult 로 교체
+            'is_adult',
+            'is_up',
             'is_favorited',
+            'authors_display', # 아래 규칙에 따라 작가 표시
         ]
 
     def get_is_favorited(self, obj):
@@ -25,6 +27,35 @@ class WebtoonSerializer(serializers.ModelSerializer):
             return obj.favorited_by.filter(id=request.user.id).exists()
         return False
 
+    def get_authors_display(self, obj):
+        def split_names(text):
+            if not text:
+                return []
+            return [name.strip() for name in text.split(',') if name.strip()]
+
+        writer_names = split_names(obj.writers)
+        painter_names = split_names(obj.painters)
+        original_names = split_names(obj.original_author)
+
+        parts = []
+
+        # 글/그림이 완전히 동일하면 한 번만
+        if set(writer_names) == set(painter_names):
+            if writer_names:
+                parts.append(', '.join(writer_names))
+        else:
+            if writer_names:
+                parts.append(', '.join(writer_names))
+            if painter_names:
+                parts.append(', '.join(painter_names))
+
+        # 원작은 있으면만 추가
+        if original_names:
+            parts.append(', '.join(original_names))
+
+        return ' / '.join(parts)  
+      
+      
 # 설문조사용 웹툰 조회 Serializer
 class SurveyCandidateSerializer(serializers.ModelSerializer):
     class Meta:

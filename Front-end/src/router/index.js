@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'   // 아직 없다면 생성 필요
 import SignupView from '../views/SignupView.vue' // 아직 없다면 생성 필요
 import SurveyView from '../views/SurveyView.vue' // [추가]
+import SearchView  from '@/views/SearchView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,7 +29,12 @@ const router = createRouter({
       path: '/survey',
       name: 'survey',
       component: SurveyView
-    }
+    },
+    {
+      path: '/search',
+      name: 'Search',
+      component: SearchView,
+    },
   ]
 })
 
