@@ -136,7 +136,7 @@ export const useAuthStore = defineStore('auth', {
       this.isAuthenticated = true
 
       try {
-        const res = await axios.get('/accounts/me/')
+        const res = await axios.get('/api/accounts/me/')
         this.user = res.data
       } catch (err) {
         // 토큰이 진짜로 잘못됐을 때만 로그아웃

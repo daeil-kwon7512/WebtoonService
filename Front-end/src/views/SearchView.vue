@@ -69,7 +69,7 @@ async function toggleFavorite(toon) {
   toon.is_favorited = !prev
 
   try {
-    await axios.post(`/webtoons/${toon.id}/favorite/`)
+    await axios.post(`/api/webtoons/${toon.id}/favorite/`)
   } catch (e) {
     toon.is_favorited = prev
     console.error(e)

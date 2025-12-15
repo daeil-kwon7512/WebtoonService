@@ -45,7 +45,7 @@ async function toggleFavorite(toon) {
 
   try {
     // Axios 요청 (토큰은 인터셉터가 자동 추가)
-    await axios.post(`/webtoons/${toon.id}/favorite/`);
+    await axios.post(`/api/webtoons/${toon.id}/favorite/`);
     if (!toon.is_favorited) {
       webtoonStore.removeFavorite(toon.id)  // 관심 리스트에서 제거
     }

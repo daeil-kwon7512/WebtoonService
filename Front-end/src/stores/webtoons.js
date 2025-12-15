@@ -22,7 +22,7 @@ export const useWebtoonStore = defineStore('webtoons', {
       this.loading = true
       this.error = null
       try {
-        const res = await axios.get('/webtoons/', {
+        const res = await axios.get('/api/webtoons/', {
           params: { q },
         })
         this.items = res.data.results
@@ -36,7 +36,7 @@ export const useWebtoonStore = defineStore('webtoons', {
     // 관심 웹툰 로드
     async fetchFavorites() {
       try {
-        const res = await axios.get('/me/favorites/')
+        const res = await axios.get('/api/me/favorites/')
         this.favorites = res.data
       } catch (err) {
         console.error(err)
