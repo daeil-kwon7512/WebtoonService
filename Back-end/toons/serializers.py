@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Webtoon
+from .models import Webtoon, SurveyCandidateWebtoon
+
 
 class WebtoonSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
@@ -52,4 +53,11 @@ class WebtoonSerializer(serializers.ModelSerializer):
         if original_names:
             parts.append(', '.join(original_names))
 
-        return ' / '.join(parts)
+        return ' / '.join(parts)  
+      
+      
+# 설문조사용 웹툰 조회 Serializer
+class SurveyCandidateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyCandidateWebtoon
+        fields = ['id', 'title', 'thumbnail_url', 'genre']

@@ -11,17 +11,24 @@ const password = ref('');
 const errorMessage = ref('');
 
 const handleLogin = async () => {
-  // 입력 검증
   if (!username.value || !password.value) {
     errorMessage.value = '아이디와 비밀번호를 모두 입력해주세요.';
     return;
   }
 
-  // Pinia Store의 login action 호출
+  // 1. 로그인 시도
   const success = await authStore.login(username.value, password.value);
 
   if (success) {
-    router.push('/'); // 로그인 성공 시 홈으로 이동
+    // 2. 로그인 성공 시, 유저 정보(onboarding_completed) 확인
+    // authStore.user는 fetchUser()에 의해 이미 채워져 있음
+    if (authStore.user && !authStore.user.onboarding_completed) {
+        // 설문 미완료 -> 설문 페이지로
+        router.push({ name: 'survey' });
+    } else {
+        // 설문 완료(또는 정보 없음) -> 홈으로
+        router.push({ name: 'home' });
+    }
   } else {
     errorMessage.value = authStore.error || '로그인에 실패했습니다.';
   }
