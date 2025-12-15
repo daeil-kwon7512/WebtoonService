@@ -36,7 +36,7 @@ const handleSignup = async () => {
     gender: formData.value.gender,
   };
 
-  // 3. 회원가입 요청
+  // 3. 회원가입 요청 // [수정됨] 가입 후 설문조사 페이지로 이동
   const success = await authStore.register(payload);
 
   if (success) {
