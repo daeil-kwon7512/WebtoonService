@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Django 서버 주소
 const instance = axios.create({
-  baseURL: 'http://localhost:8000/api/accounts/', // urls.py 설정에 맞게 조정
+  baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },

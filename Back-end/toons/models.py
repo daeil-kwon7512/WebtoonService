@@ -31,3 +31,12 @@ class Webtoon(models.Model):
     def __str__(self):
         return self.title
     
+    
+# 설문조사(3단계) 화면에 보여줄 후보 웹툰들
+class SurveyCandidateWebtoon(models.Model):
+    title = models.CharField(max_length=100)
+    genre = models.CharField(max_length=50, null=True, blank=True) # 필터링 용도
+    thumbnail_url = models.URLField(null=True, blank=True)
+    
+    def __str__(self):
+        return self.title

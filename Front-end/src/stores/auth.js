@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await axios.post('/login/', {
+        const response = await axios.post('/api/accounts/login/', {
           username,
           password,
         });
@@ -43,14 +43,14 @@ export const useAuthStore = defineStore('auth', {
     // 2. 내 정보 가져오기 (새로고침 시 상태 복구용)
     async fetchUser() {
       try {
-        const response = await axios.get('/me/');
+        const response = await axios.get('/api/accounts/me/');
         this.user = response.data;
         this.isAuthenticated = true;
       } catch (err) {
         this.user = null;
         this.isAuthenticated = false;
         // 토큰이 유효하지 않으면 로그아웃 처리
-        this.logout(); 
+        // this.logout(); 
       }
     },
 
@@ -60,7 +60,7 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
       try {
         // userData는 { username, password, email, gender ... }
-        await axios.post('/signup/', userData);
+        await axios.post('/api/accounts/signup/', userData);
         return true;
       } catch (err) {
         // 서버에서 오는 에러 메시지 처리 (예: 이미 존재하는 아이디)
@@ -72,13 +72,22 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    // [추가] 설문조사 완료 처리 (상태 업데이트)
+    async completeSurvey() {
+        if (this.user) {
+            this.user.onboarding_completed = true;
+        }
+        // 필요하다면 다시 fetchUser()를 불러서 확실하게 서버 동기화
+        await this.fetchUser();
+    },
+
     // 4. 로그아웃
     async logout() {
       try {
         const refresh = localStorage.getItem('refreshToken');
         if (refresh) {
           // 서버 블랙리스트에 추가 (선택 사항이지만 보안상 권장)
-          await axios.post('/logout/', { refresh });
+          await axios.post('/api/accounts/logout/', { refresh });
         }
       } catch (err) {
         console.warn('로그아웃 처리 중 에러 무시', err);
