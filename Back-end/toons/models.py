@@ -10,10 +10,10 @@ class Genre(models.Model):
     
 class Webtoon(models.Model):
     provider = models.CharField(max_length=15)
-    title = models.CharField(max_length=255)
-    writers = models.CharField(max_length=255)
-    painters = models.CharField(max_length=255)
-    original_author = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=255, unique=True)
+    writers = models.CharField(max_length=255, blank=True, null=True)
+    painters = models.CharField(max_length=255, blank=True, null=True)
+    original_author = models.CharField(max_length=255, blank=True, null=True)
     update_days = models.CharField(max_length=50)
     thumbnail = models.URLField()
     url = models.URLField()

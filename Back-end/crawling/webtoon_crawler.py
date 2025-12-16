@@ -1564,6 +1564,8 @@ if __name__ == '__main__':
     # (실제 실행 시에는 process_xxx_webtoons 함수가 정의되어 있어야 합니다.)
     final_df = run_concurrent_crawling()
 
+    final_df['titleName'] = final_df['titleName'].str.strip()
+
     prov_agg = (
         final_df
         .groupby("titleName", as_index=False)["provider"]
