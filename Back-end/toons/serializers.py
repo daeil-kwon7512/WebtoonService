@@ -61,3 +61,11 @@ class SurveyCandidateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyCandidateWebtoon
         fields = ['id', 'title', 'thumbnail_url', 'genre']
+
+# 웹툰 상세페이지용 정보조회 Serializer
+class WebtoonDetailSerializer(WebtoonSerializer):
+    # 장르(태그)를 문자열 리스트로 가져오기 (예: ["판타지", "무협"])
+    genres = serializers.StringRelatedField(many=True)
+
+    class Meta(WebtoonSerializer.Meta):
+        fields = WebtoonSerializer.Meta.fields + ['synopsis', 'genres']

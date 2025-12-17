@@ -1,8 +1,8 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'   // 아직 없다면 생성 필요
-import SignupView from '../views/SignupView.vue' // 아직 없다면 생성 필요
+import LoginView from '../views/LoginView.vue'   
+import SignupView from '../views/SignupView.vue' 
 import SurveyView from '../views/SurveyView.vue' // [추가]
 import SearchView  from '@/views/SearchView.vue'
 

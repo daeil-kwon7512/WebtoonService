@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from .models import Webtoon, Genre
-from .serializers import WebtoonSerializer
+from .serializers import WebtoonSerializer, WebtoonDetailSerializer
 import requests
 from django.core.paginator import Paginator
 import pandas as pd
@@ -100,8 +100,15 @@ def webtoon_detail(request, webtoon_id):
     except Webtoon.DoesNotExist:
         return Response({'error': '웹툰을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
     
-    serializer = WebtoonSerializer(webtoon, context={'request': request})
+    # 2. 여기서 Serializer 교체!
+    # 기존: serializer = WebtoonSerializer(...)
+    # 변경: 상세 전용 Serializer 사용
+    serializer = WebtoonDetailSerializer(webtoon, context={'request': request})
+    
     return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # serializer = WebtoonSerializer(webtoon, context={'request': request})
+    # return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
