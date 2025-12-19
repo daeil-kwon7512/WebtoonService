@@ -1,10 +1,12 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'   // 아직 없다면 생성 필요
-import SignupView from '../views/SignupView.vue' // 아직 없다면 생성 필요
+import LoginView from '../views/LoginView.vue'   
+import SignupView from '../views/SignupView.vue' 
 import SurveyView from '../views/SurveyView.vue' // [추가]
 import SearchView  from '@/views/SearchView.vue'
+import WebtoonDetailView from '../views/WebtoonDetailView.vue' // [상세페이지용 추가]
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +36,12 @@ const router = createRouter({
       path: '/search',
       name: 'Search',
       component: SearchView,
+    },
+    {
+      path: '/webtoon/:id', // 동적 라우팅
+      name: 'WebtoonDetail',
+      component: WebtoonDetailView,
+      props: true // id를 props로 전달
     },
   ]
 })
