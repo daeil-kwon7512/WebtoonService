@@ -1,6 +1,6 @@
 import json
 from django.core.management.base import BaseCommand
-from toons.models import Webtoon
+from toons.models import Webtoon, Genre
 from django.db import transaction, IntegrityError
 import os
 
@@ -64,6 +64,12 @@ class Command(BaseCommand):
                         **lookup_kwargs,
                         defaults=defaults_values
                     )
+                    genre_text = item.get('genre', '')
+                    if genre_text:
+                        names = [g.strip() for g in str(genre_text).split(',') if g.strip()]
+                        for name in names:
+                            genre_obj, _ = Genre.objects.get_or_create(tag=name)
+                            webtoon.genres.add(genre_obj)
 
                     if created:
                         created_count += 1
